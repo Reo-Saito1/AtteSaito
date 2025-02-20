@@ -48,5 +48,30 @@ class AttendanceController extends Controller
         ]);
 
         return view('index');
-    }    
+    }
+
+    public function attendanceList()
+    {
+        $dt = new Carbon();
+        $date = $dt->toDateString();
+
+        $lists = \DB::table('users')
+        ->join('attendances', 'users.id', '=', 'attendances.user_id')
+        ->join('rests', 'attendances.id', '=', 'rests.attendance_id')
+        ->select(
+            'users.name',
+            'attendances.work_start_time',
+            'attendances.work_end_time',
+            \DB::raw('SEC_TO_TIME(SUM(TIMESTAMPDIFF(SECOND, rests.rest_start_time, rests.rest_end_time))) as total_rest_time'),
+            \DB::raw('SEC_TO_TIME(
+                TIMESTAMPDIFF(SECOND, attendances.work_start_time, attendances.work_end_time) - 
+                SUM(TIMESTAMPDIFF(SECOND, rests.rest_start_time, rests.rest_end_time))
+                ) as work_time')
+        )
+        ->where('attendances.work_date',$date)
+        ->groupBy('attendances.id')
+        ->get();
+
+        return view('list',compact(['date','lists']));
+    }
 }
